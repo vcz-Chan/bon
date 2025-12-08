@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { errorHandler } from './middleware/error.middleware';
 import authRouter from './modules/auth/auth.controller';
 import chatRouter from './modules/chat/chat.controller';
@@ -8,6 +9,14 @@ import previewRouter from './modules/chat/chat.preview.controller';
 
 const app = express();
 
+app.use(
+  cors({
+    origin: 'https://bon-fe.vercel.app',
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'X-Admin-Password', 'X-User-Password', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  })
+);
 app.use(express.json());
 
 app.get('/healthz', (_req, res) => {
