@@ -58,7 +58,7 @@ function buildMessages(question: string, contextChunks: RagChunk[], policyPrompt
       role: 'system',
       content: `${policyPrompt}
 추가 지시:
-- 먼저 사용자 질문을 1줄로 이해/요약한 뒤, 규정 청크에서 답변 근거를 찾는다.
+- 먼저 사용자 질문을 이해한 뒤, 규정 청크에서 답변 근거를 찾는다.
 - 규정 청크가 있으면 그 내용을 근거로 2~4문장 이내로 간결하게 답한다.
 - 청크에 없는 정보는 추측하거나 만들어내지 않는다.
 - 규정 청크가 없거나 무관하면 친절하게 "해당 매장 관련 규정이 없어 안내가 어려워요. 담당 sm에게 문의 부탁드립니다."라고 한 번만 덧붙인다.
