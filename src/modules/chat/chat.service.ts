@@ -93,23 +93,6 @@ export class ChatService {
       const requiresSmExists = filtered.some((c) => c.requires_sm);
       const fallbackToSm = filtered.length === 0;
 
-      // 디버그 로깅: 유사도 점수 목록
-      // eslint-disable-next-line no-console
-      console.log(
-        '[chat][rag-scores]',
-        chunks.map((c) => ({
-          chunk_id: c.chunk_id,
-          score: c.score,
-          chunk_score: c.chunk_score,
-          title_score: c.title_score,
-          title: c.title
-        })),
-        '| filtered >=',
-        env.ragMinScore,
-        'count:',
-        filtered.length
-      );
-
       return { chunks: filtered, fallbackToSm, requiresSmExists };
     } finally {
       client.release();
