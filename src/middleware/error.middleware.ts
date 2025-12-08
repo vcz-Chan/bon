@@ -28,6 +28,6 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
 
   res.status(status).json({
     ok: false,
-    message: err.message || 'Internal Server Error'
+    message: err.message || '내부 서버 오류'
   });
 }

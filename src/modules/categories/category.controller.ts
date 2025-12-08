@@ -17,7 +17,7 @@ router.get('/', requireRole('admin'), async (_req, res, next) => {
 router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const { code, name, description, sort_order } = req.body;
-    if (!code || !name) return res.status(400).json({ ok: false, message: 'code and name are required' });
+    if (!code || !name) return res.status(400).json({ ok: false, message: 'code와 name은 필수입니다.' });
     const created = await service.create({ code, name, description, sort_order });
     res.json({ ok: true, data: created });
   } catch (err) {
@@ -28,9 +28,9 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
 router.put('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ ok: false, message: 'invalid id' });
+    if (!id) return res.status(400).json({ ok: false, message: '유효하지 않은 ID입니다.' });
     const updated = await service.update(id, req.body);
-    if (!updated) return res.status(404).json({ ok: false, message: 'not found' });
+    if (!updated) return res.status(404).json({ ok: false, message: '데이터를 찾을 수 없습니다.' });
     res.json({ ok: true, data: updated });
   } catch (err) {
     next(err);
@@ -40,7 +40,7 @@ router.put('/:id', requireRole('admin'), async (req, res, next) => {
 router.delete('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ ok: false, message: 'invalid id' });
+    if (!id) return res.status(400).json({ ok: false, message: '유효하지 않은 ID입니다.' });
     await service.delete(id);
     res.json({ ok: true });
   } catch (err) {

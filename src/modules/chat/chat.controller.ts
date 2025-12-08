@@ -8,7 +8,7 @@ const chatService = new ChatService();
 router.post('/chat', requireRole('user'), async (req: Request, res: Response) => {
   const { question } = req.body as { question?: string };
   if (!question || !question.trim()) {
-    return res.status(400).json({ ok: false, message: 'question is required' });
+    return res.status(400).json({ ok: false, message: 'question은 필수입니다.' });
   }
   try {
     const result = await chatService.getAnswer(question);
@@ -22,7 +22,7 @@ router.post('/chat', requireRole('user'), async (req: Request, res: Response) =>
 router.post('/chat/stream', requireRole('user'), async (req: Request, res: Response) => {
   const { question } = req.body as { question?: string };
   if (!question || !question.trim()) {
-    return res.status(400).json({ ok: false, message: 'question is required' });
+    return res.status(400).json({ ok: false, message: 'question은 필수입니다.' });
   }
 
   try {
@@ -51,7 +51,7 @@ router.post('/chat/stream', requireRole('user'), async (req: Request, res: Respo
     console.error('[chat/stream error]', err);
     res.status(500);
     res.write('event: error\n');
-    res.write(`data: {"message":"internal error"}\n\n`);
+    res.write(`data: {"message":"내부 오류가 발생했습니다."}\n\n`);
     res.end();
   }
 });

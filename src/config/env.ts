@@ -32,7 +32,7 @@ export const env = {
 export const requireEnvString = (key: keyof typeof env) => {
   const value = env[key];
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new Error(`Missing required environment variable: ${key}`);
+    throw new Error(`필수 환경변수가 설정되지 않았습니다: ${key}`);
   }
   return value;
 };

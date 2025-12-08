@@ -8,7 +8,7 @@ const chatService = new ChatService();
 router.post('/preview-chat', requireRole('admin'), async (req, res, next) => {
   const { question } = req.body as { question?: string };
   if (!question || !question.trim()) {
-    return res.status(400).json({ ok: false, message: 'question is required' });
+    return res.status(400).json({ ok: false, message: 'question은 필수입니다.' });
   }
   try {
     const result = await chatService.getAnswer(question, { includeChunks: true });

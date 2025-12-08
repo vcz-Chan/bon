@@ -42,7 +42,7 @@ export class ArticleService {
       await client.query('BEGIN');
       const category = await this.categoryRepo.getById(payload.category_id, client);
       if (!category) {
-        throw new Error('category not found');
+        throw new Error('카테고리를 찾을 수 없습니다.');
       }
 
       const articleId = await this.articleRepo.insert(
@@ -88,11 +88,11 @@ export class ArticleService {
       await client.query('BEGIN');
       const category = await this.categoryRepo.getById(payload.category_id, client);
       if (!category) {
-        throw new Error('category not found');
+        throw new Error('카테고리를 찾을 수 없습니다.');
       }
       const existing = await this.articleRepo.getById(id, client);
       if (!existing) {
-        throw new Error('article not found');
+        throw new Error('문서를 찾을 수 없습니다.');
       }
 
       await this.articleRepo.update(
