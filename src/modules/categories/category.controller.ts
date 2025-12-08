@@ -7,7 +7,7 @@ const service = new CategoryService();
 
 router.get('/', requireRole('admin'), async (_req, res, next) => {
   try {
-    const data = await service.list();
+    const data = await service.listWithCounts();
     res.json({ ok: true, data });
   } catch (err) {
     next(err);

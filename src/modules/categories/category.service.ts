@@ -7,6 +7,10 @@ export class CategoryService {
     return this.repo.list();
   }
 
+  listWithCounts() {
+    return this.repo.listWithArticleCount();
+  }
+
   create(data: { code: string; name: string; description?: string; sort_order?: number }) {
     return this.repo.create(data);
   }
