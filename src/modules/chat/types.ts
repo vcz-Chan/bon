@@ -5,5 +5,7 @@ export type RagChunk = {
   title?: string;
   requires_sm: boolean;
   content: string;
-  score?: number;
+  score?: number; // combined score
+  chunk_score?: number;
+  title_score?: number;
 };

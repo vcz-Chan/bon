@@ -33,8 +33,9 @@ export class ArticleService {
 
   async create(payload: UpsertPayload) {
     const chunks = splitContentIntoChunks(payload.content);
-    const embeddings = await embeddingsProvider.embedMany(chunks);
-    const vectors = toPgVectorMany(embeddings);
+    const chunkEmbeddings = await embeddingsProvider.embedMany(chunks);
+    const vectors = toPgVectorMany(chunkEmbeddings);
+    const titleEmbedding = toPgVector(await embeddingsProvider.embedText(payload.title));
 
     const client = await pool.connect();
     try {
@@ -52,7 +53,8 @@ export class ArticleService {
           summary: payload.summary ?? null,
           priority: payload.priority ?? 0,
           requires_sm: payload.requires_sm ?? false,
-          is_published: payload.is_published ?? true
+          is_published: payload.is_published ?? true,
+          title_embedding: titleEmbedding
         },
         client
       );
@@ -77,8 +79,9 @@ export class ArticleService {
 
   async update(id: number, payload: UpsertPayload) {
     const chunks = splitContentIntoChunks(payload.content);
-    const embeddings = await embeddingsProvider.embedMany(chunks);
-    const vectors = toPgVectorMany(embeddings);
+    const chunkEmbeddings = await embeddingsProvider.embedMany(chunks);
+    const vectors = toPgVectorMany(chunkEmbeddings);
+    const titleEmbedding = toPgVector(await embeddingsProvider.embedText(payload.title));
 
     const client = await pool.connect();
     try {
@@ -101,7 +104,8 @@ export class ArticleService {
           summary: payload.summary ?? null,
           priority: payload.priority ?? 0,
           requires_sm: payload.requires_sm ?? false,
-          is_published: payload.is_published ?? true
+          is_published: payload.is_published ?? true,
+          title_embedding: titleEmbedding
         },
         client
       );

@@ -10,6 +10,7 @@ export type Article = {
   priority: number;
   requires_sm: boolean;
   is_published: boolean;
+  title_embedding?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -40,7 +41,7 @@ export class ArticleRepository {
     values.push(limit, offset);
 
     const dataQuery = `
-      SELECT id, category_id, title, content, summary, priority, requires_sm, is_published
+      SELECT id, category_id, title, content, summary, priority, requires_sm, is_published, title_embedding
       FROM kb_article
       ${where}
       ORDER BY id DESC
@@ -65,12 +66,21 @@ export class ArticleRepository {
   }
 
   async insert(article: Omit<Article, 'id'>, client: PoolClient): Promise<number> {
-    const { category_id, title, content, summary, priority, requires_sm, is_published } = article;
+    const {
+      category_id,
+      title,
+      content,
+      summary,
+      priority,
+      requires_sm,
+      is_published,
+      title_embedding
+    } = article;
     const { rows } = await client.query<{ id: number }>(
-      `INSERT INTO kb_article (category_id, title, content, summary, priority, requires_sm, is_published)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO kb_article (category_id, title, content, summary, priority, requires_sm, is_published, title_embedding)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id`,
-      [category_id, title, content, summary ?? null, priority, requires_sm, is_published]
+      [category_id, title, content, summary ?? null, priority, requires_sm, is_published, title_embedding]
     );
     return rows[0].id;
   }

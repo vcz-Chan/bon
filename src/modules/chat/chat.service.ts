@@ -63,11 +63,13 @@ export class ChatService {
           c.content,
           a.title,
           a.requires_sm,
-          1 - (c.embedding <=> $1) AS score
+          1 - (c.embedding <=> $1::vector) AS chunk_score,
+          COALESCE(1 - (a.title_embedding <=> $1::vector), 0) AS title_score,
+          ((1 - (c.embedding <=> $1::vector)) * 0.4 + COALESCE(1 - (a.title_embedding <=> $1::vector), 0) * 0.6) AS score
         FROM kb_chunk c
         JOIN kb_article a ON a.id = c.article_id
         WHERE a.is_published = true
-        ORDER BY c.embedding <=> $1::vector
+        ORDER BY ((1 - (c.embedding <=> $1::vector)) * 0.4 + COALESCE(1 - (a.title_embedding <=> $1::vector), 0) * 0.6) DESC
         LIMIT $2;
         `,
         [embeddingParam, env.ragTopK]
@@ -79,15 +81,36 @@ export class ChatService {
         title: row.title,
         requires_sm: row.requires_sm,
         content: row.content,
-        score: Number(row.score)
+        score: Number(row.score),
+        chunk_score: Number(row.chunk_score),
+        title_score: Number(row.title_score)
       }));
 
-      // 임계값/SM 체크
-      const meetsThreshold = chunks.some((c) => (c.score ?? 0) >= env.ragMinScore);
-      const requiresSmExists = chunks.some((c) => c.requires_sm);
-      const fallbackToSm = !meetsThreshold || chunks.length === 0;
+      // 임계값 필터링: 제목 또는 청크 점수 중 하나라도 임계 이상이면 포함
+      const filtered = chunks.filter(
+        (c) => (c.score ?? 0) >= env.ragMinScore || (c.title_score ?? 0) >= env.ragMinScore
+      );
+      const requiresSmExists = filtered.some((c) => c.requires_sm);
+      const fallbackToSm = filtered.length === 0;
 
-      return { chunks, fallbackToSm, requiresSmExists };
+      // 디버그 로깅: 유사도 점수 목록
+      // eslint-disable-next-line no-console
+      console.log(
+        '[chat][rag-scores]',
+        chunks.map((c) => ({
+          chunk_id: c.chunk_id,
+          score: c.score,
+          chunk_score: c.chunk_score,
+          title_score: c.title_score,
+          title: c.title
+        })),
+        '| filtered >=',
+        env.ragMinScore,
+        'count:',
+        filtered.length
+      );
+
+      return { chunks: filtered, fallbackToSm, requiresSmExists };
     } finally {
       client.release();
     }
