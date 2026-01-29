@@ -130,7 +130,7 @@ export class ArticleService {
   }
 
   async delete(id: number) {
-    await this.articleRepo.delete(id);
+    await this.articleRepo.softDelete(id);
   }
 
   private async replaceChunks(params: {

@@ -11,6 +11,7 @@ export type Article = {
   requires_sm: boolean;
   is_published: boolean;
   title_embedding?: string | null;
+  deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -23,7 +24,7 @@ export class ArticleRepository {
     page_size?: number;
   }): Promise<{ data: Article[]; total: number }> {
     const { category_id, is_published, page = 1, page_size = 20 } = params;
-    const filters: string[] = [];
+    const filters: string[] = ['deleted_at IS NULL'];
     const values: any[] = [];
 
     if (category_id) {
@@ -59,7 +60,7 @@ export class ArticleRepository {
     const executor = client || pool;
     const { rows } = await executor.query<Article>(
       `SELECT id, category_id, title, content, summary, priority, requires_sm, is_published
-       FROM kb_article WHERE id = $1`,
+       FROM kb_article WHERE id = $1 AND deleted_at IS NULL`,
       [id]
     );
     return rows[0] || null;
@@ -95,10 +96,19 @@ export class ArticleRepository {
     }
     if (fields.length === 0) return;
     values.push(id);
-    await client.query(`UPDATE kb_article SET ${fields.join(', ')} WHERE id = $${idx}`, values);
+    await client.query(`UPDATE kb_article SET ${fields.join(', ')} WHERE id = $${idx} AND deleted_at IS NULL`, values);
   }
 
-  async delete(id: number): Promise<void> {
-    await pool.query('DELETE FROM kb_article WHERE id = $1', [id]);
+  async softDelete(id: number, client?: PoolClient): Promise<void> {
+    const executor = client || pool;
+    await executor.query('UPDATE kb_article SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL', [id]);
+  }
+
+  async softDeleteByCategoryId(categoryId: number, client?: PoolClient): Promise<void> {
+    const executor = client || pool;
+    await executor.query(
+      'UPDATE kb_article SET deleted_at = now() WHERE category_id = $1 AND deleted_at IS NULL',
+      [categoryId]
+    );
   }
 }

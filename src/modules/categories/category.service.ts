@@ -1,7 +1,12 @@
+import { pool } from '../../config/db';
+import { ArticleRepository } from '../articles/article.repository';
 import { CategoryRepository } from './category.repository';
 
 export class CategoryService {
-  constructor(private repo = new CategoryRepository()) {}
+  constructor(
+    private repo = new CategoryRepository(),
+    private articleRepo = new ArticleRepository()
+  ) {}
 
   list() {
     return this.repo.list();
@@ -19,7 +24,18 @@ export class CategoryService {
     return this.repo.update(id, data);
   }
 
-  delete(id: number) {
-    return this.repo.delete(id);
+  async delete(id: number) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await this.repo.softDelete(id, client);
+      await this.articleRepo.softDeleteByCategoryId(id, client);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 }

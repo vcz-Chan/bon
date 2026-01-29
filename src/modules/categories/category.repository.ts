@@ -8,13 +8,14 @@ export type Category = {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  deleted_at?: string | null;
   article_count?: number;
 };
 
 export class CategoryRepository {
   async list(): Promise<Category[]> {
     const { rows } = await pool.query<Category>(
-      'SELECT id, code, name, description, sort_order, is_active FROM kb_category ORDER BY sort_order ASC, id DESC'
+      'SELECT id, code, name, description, sort_order, is_active FROM kb_category WHERE deleted_at IS NULL ORDER BY sort_order ASC, id DESC'
     );
     return rows;
   }
@@ -31,7 +32,11 @@ export class CategoryRepository {
         c.is_active,
         COALESCE(COUNT(a.id), 0) AS article_count
       FROM kb_category c
-      LEFT JOIN kb_article a ON a.category_id = c.id
+      LEFT JOIN kb_article a
+        ON a.category_id = c.id
+        AND a.is_published = true
+        AND a.deleted_at IS NULL
+      WHERE c.deleted_at IS NULL
       GROUP BY c.id, c.code, c.name, c.description, c.sort_order, c.is_active
       ORDER BY c.sort_order ASC, c.id DESC
       `
@@ -42,7 +47,7 @@ export class CategoryRepository {
   async getById(id: number, client?: PoolClient): Promise<Category | null> {
     const executor = client || pool;
     const { rows } = await executor.query<Category>(
-      'SELECT id, code, name, description, sort_order, is_active FROM kb_category WHERE id = $1',
+      'SELECT id, code, name, description, sort_order, is_active FROM kb_category WHERE id = $1 AND deleted_at IS NULL',
       [id]
     );
     return rows[0] || null;
@@ -78,13 +83,16 @@ export class CategoryRepository {
     values.push(id);
 
     const { rows } = await pool.query<Category>(
-      `UPDATE kb_category SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, code, name, description, sort_order, is_active`,
+      `UPDATE kb_category SET ${fields.join(', ')} WHERE id = $${idx} AND deleted_at IS NULL RETURNING id, code, name, description, sort_order, is_active`,
       values
     );
     return rows[0] || null;
   }
 
-  async delete(id: number) {
-    await pool.query('DELETE FROM kb_category WHERE id = $1', [id]);
+  async softDelete(id: number, client?: PoolClient) {
+    const executor = client || pool;
+    await executor.query('UPDATE kb_category SET deleted_at = now(), is_active = false WHERE id = $1 AND deleted_at IS NULL', [
+      id
+    ]);
   }
 }
