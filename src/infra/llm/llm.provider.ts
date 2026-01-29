@@ -13,32 +13,75 @@ type GenerateParams = {
   policyPrompt: string;
 };
 
+export type LlmUsage = {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+};
+
+export type LlmCost = {
+  prompt_cost?: number;
+  completion_cost?: number;
+  total_cost?: number;
+};
+
 export class LlmProvider {
-  async generateAnswer(params: GenerateParams): Promise<string> {
+  async generateAnswer(params: GenerateParams): Promise<{ text: string; usage?: LlmUsage; cost?: LlmCost }> {
     const { question, contextChunks, policyPrompt } = params;
     const messages = buildMessages(question, contextChunks, policyPrompt);
     const res = await client.chat.completions.create({
       model: env.llmModel,
       messages
     });
-    return res.choices[0].message?.content || '';
+    const usage = res.usage
+      ? {
+          prompt_tokens: res.usage.prompt_tokens,
+          completion_tokens: res.usage.completion_tokens,
+          total_tokens: res.usage.total_tokens
+        }
+      : undefined;
+    const cost = usage ? calcCost(usage) : undefined;
+    return {
+      text: res.choices[0].message?.content || '',
+      usage,
+      cost
+    };
   }
 
-  async *streamAnswer(params: GenerateParams): AsyncIterable<string> {
+  async streamAnswer(params: GenerateParams): Promise<{
+    stream: AsyncIterable<string>;
+    usageRef: { value?: LlmUsage; cost?: LlmCost };
+  }> {
     const { question, contextChunks, policyPrompt } = params;
     const messages = buildMessages(question, contextChunks, policyPrompt);
     const stream = await client.chat.completions.create({
       model: env.llmModel,
       messages,
-      stream: true
+      stream: true,
+      stream_options: { include_usage: true }
     });
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content;
-      if (delta) {
-        yield delta;
+    const usageRef: { value?: LlmUsage; cost?: LlmCost } = {};
+
+    const wrapped = (async function* () {
+      for await (const chunk of stream) {
+        if ((chunk as any).usage) {
+          const usage = (chunk as any).usage;
+          usageRef.value = {
+            prompt_tokens: usage.prompt_tokens,
+            completion_tokens: usage.completion_tokens,
+            total_tokens: usage.total_tokens
+          };
+          usageRef.cost = calcCost(usageRef.value);
+        }
+        const delta = chunk.choices[0]?.delta?.content;
+        if (delta) {
+          yield delta;
+        }
       }
-    }
+    })();
+
+    return { stream: wrapped, usageRef };
   }
 }
 
@@ -81,4 +124,22 @@ ${contextText}
 - 규정 외 정보는 추측하지 말고 모른다고 답한다.`
     }
   ] as OpenAI.Chat.Completions.ChatCompletionMessageParam[];
+}
+
+function calcCost(usage: LlmUsage): LlmCost {
+  const promptCost =
+    usage.prompt_tokens !== undefined ? (usage.prompt_tokens / 1000) * env.llmPromptCostPer1k : undefined;
+  const completionCost =
+    usage.completion_tokens !== undefined
+      ? (usage.completion_tokens / 1000) * env.llmCompletionCostPer1k
+      : undefined;
+  const totalCost =
+    promptCost !== undefined || completionCost !== undefined
+      ? (promptCost || 0) + (completionCost || 0)
+      : undefined;
+  return {
+    prompt_cost: promptCost,
+    completion_cost: completionCost,
+    total_cost: totalCost
+  };
 }

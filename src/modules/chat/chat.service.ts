@@ -24,15 +24,21 @@ export class ChatService {
   async getAnswer(question: string, opts?: { includeChunks?: boolean }) {
     const { chunks, fallbackToSm, requiresSmExists } = await this.retrieveRagContext(question);
     const policyPrompt = buildPolicyPrompt(requiresSmExists, chunks.length > 0);
-    const answer = await llmProvider.generateAnswer({
+    const { text: answer, usage, cost } = await llmProvider.generateAnswer({
       question,
       contextChunks: chunks,
       policyPrompt
     });
+    if (usage) {
+      // eslint-disable-next-line no-console
+      console.log('[llm][usage][chat]', usage, cost ? { cost_usd: cost } : '');
+    }
     const finalFallback = fallbackToSm || requiresSmExists;
     return {
       answer,
       fallback_to_sm: finalFallback,
+      usage,
+      cost,
       references: toReferences(chunks),
       used_chunks: opts?.includeChunks ? chunks : undefined
     };
@@ -41,12 +47,12 @@ export class ChatService {
   async streamAnswer(question: string) {
     const { chunks, fallbackToSm, requiresSmExists } = await this.retrieveRagContext(question);
     const policyPrompt = buildPolicyPrompt(requiresSmExists, chunks.length > 0);
-    const stream = llmProvider.streamAnswer({
+    const { stream, usageRef } = await llmProvider.streamAnswer({
       question,
       contextChunks: chunks,
       policyPrompt
     });
-    return { stream, fallbackToSm, references: toReferences(chunks) };
+    return { stream, usageRef, fallbackToSm, references: toReferences(chunks) };
   }
 
   private async retrieveRagContext(question: string) {
@@ -69,6 +75,7 @@ export class ChatService {
         FROM kb_chunk c
         JOIN kb_article a ON a.id = c.article_id
         WHERE a.is_published = true
+          AND a.deleted_at IS NULL
         ORDER BY ((1 - (c.embedding <=> $1::vector)) * 0.4 + COALESCE(1 - (a.title_embedding <=> $1::vector), 0) * 0.6) DESC
         LIMIT $2;
         `,

@@ -12,6 +12,10 @@ router.post('/chat', requireRole('user'), async (req: Request, res: Response) =>
   }
   try {
     const result = await chatService.getAnswer(question);
+    if (result.usage) {
+      // eslint-disable-next-line no-console
+      console.log('[llm][usage][chat-response]', result.usage, result.cost ? { cost_usd: result.cost } : '');
+    }
     return res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500);
@@ -26,7 +30,7 @@ router.post('/chat/stream', requireRole('user'), async (req: Request, res: Respo
   }
 
   try {
-    const { stream, fallbackToSm, references } = await chatService.streamAnswer(question);
+    const { stream, usageRef, fallbackToSm, references } = await chatService.streamAnswer(question);
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -43,7 +47,14 @@ router.post('/chat/stream', requireRole('user'), async (req: Request, res: Respo
       send('chunk', { text: chunk });
     }
 
-    send('end', {});
+    if (usageRef.value) {
+      send('usage', { usage: usageRef.value, cost: usageRef.cost });
+      // eslint-disable-next-line no-console
+      console.log('[llm][usage][chat-stream]', usageRef.value, usageRef.cost ? { cost_usd: usageRef.cost } : '');
+    }
+
+    // end 이벤트에도 usage/cost를 포함해 클라이언트가 한 번에 받을 수 있게 함
+    send('end', usageRef.value ? { usage: usageRef.value, cost: usageRef.cost } : {});
     res.end();
   } catch (err) {
     // 최소 로깅: 스트림 에러를 서버 로그에 남김

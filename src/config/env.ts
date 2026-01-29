@@ -26,7 +26,9 @@ export const env = {
   embeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
   embeddingDim: toNumber(process.env.EMBEDDING_DIM, 1536),
   ragTopK: toNumber(process.env.RAG_TOP_K, 5),
-  ragMinScore: toFloat(process.env.RAG_MIN_SCORE, 0.8)
+  ragMinScore: toFloat(process.env.RAG_MIN_SCORE, 0.8),
+  llmPromptCostPer1k: toFloat(process.env.LLM_PROMPT_COST_PER_1K, 0),
+  llmCompletionCostPer1k: toFloat(process.env.LLM_COMPLETION_COST_PER_1K, 0)
 };
 
 export const requireEnvString = (key: keyof typeof env) => {
